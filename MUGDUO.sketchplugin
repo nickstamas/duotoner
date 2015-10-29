@@ -1,0 +1,122 @@
+// MUGDUO (control command d)
+// by Nick Stamas @nickstamas
+
+if ([selection count] > 0) {
+  var alert = [NSAlert alertWithMessageText: "Pick a MUG"
+                                 defaultButton:"OK"
+                               alternateButton:"Cancel"
+                                   otherButton:nil
+                     informativeTextWithFormat:""];
+
+  // var input = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 200, 24)];
+  // [input setStringValue:"dog,corgi"];
+  // [input autorelease];
+
+  var MUGs = [
+    {name: 'Hiking', id: '608977'},
+    {name: 'Photography', id: '3400072'},
+    {name: 'Tech', id: '16287122'}
+  ];
+
+  var comboBox = [[NSComboBox alloc] initWithFrame:NSMakeRect(0,0,200,28)];
+  [comboBox autorelease];
+
+  for (var i = 0; i < MUGs.length; i++) {
+    [comboBox addItemWithObjectValue: MUGs[i]['name']];
+  }
+
+  [alert setAccessoryView:comboBox];
+  [comboBox selectItemAtIndex: 0];
+
+
+  var button = [alert runModal];
+
+  if (button == NSAlertDefaultReturn) {
+    var selectedIndex = [comboBox indexOfSelectedItem];
+
+    log(selectedIndex);
+
+    var MUGId = MUGs[selectedIndex]['id'];
+
+    log(MUGId);
+
+    var request = [[NSMutableURLRequest alloc] init];
+    [request setHTTPMethod:@"GET"];
+    var queryString = "https://api.meetup.com/2/photos?&sign=true&photo-host=public&group_id=" + MUGId + "&page=20";
+    [request setURL:[NSURL URLWithString:queryString]];
+
+    var error = [[NSError alloc] init];
+    var responseCode = null;
+
+    var oResponseData = [NSURLConnection sendSynchronousRequest:request returningResponse:responseCode error:error];
+
+    var dataString = [[NSString alloc] initWithData:oResponseData
+                                           encoding:NSUTF8StringEncoding];
+
+    var pattern = new RegExp("\\\\'", "g");
+    var validJSONString = dataString.replace(pattern, "'");
+
+    var data = JSON.parse(validJSONString);
+
+    log(data);
+
+    // [dark, light]
+    var colorSets = [
+      ["950449", "80b0ff"],
+      ["342569", "f5592d"],
+      ["48037a", "35db71"],
+      ["130577", "f35fa9"],
+      ["430059", "ff8d58"],
+      ["0f1c84", "f5cf55"],
+      ["0f1c84", "f5cf55"]
+    ];
+
+    if (data.results.length > 0) {
+      for (var i=0; i < [selection count]; i++) {
+        var randomIndex = Math.floor(Math.random()*(data.results.length-1));
+
+        log(randomIndex);
+
+        log([selection count]);
+
+        var imageURLString = data.results[randomIndex].photo_link;
+
+        var randomDuotone = Math.floor(Math.random()*(colorSets.length-1));
+
+        //var ssURLString = "http://photos4.meetupstatic.com/photos/event/3/0/9/a/thumb_337932442.jpeg";
+        //var ssURLString = "http://foundation.specialsnowflake.com/duotone.php?url=http://photos4.meetupstatic.com/photos/event/3/0/9/a/thumb_337932442.jpeg"  + "&colorDark=" + colorSets[0][0] + "&colorLight=" + colorSets[0][1];
+        var ssURLString = "http://foundation.specialsnowflake.com/duotone.php?url=" + imageURLString + "&colorDark=" + colorSets[randomDuotone][0] + "&colorLight=" + colorSets[randomDuotone][1];
+
+        log(ssURLString);
+
+        var url = [[NSURL alloc] initWithString: ssURLString];
+
+        log(url);
+
+        var newImage = [[NSImage alloc] initWithContentsOfURL:url];
+
+        log(newImage);
+
+        log(selection);
+
+        var layer = [selection objectAtIndex:i];
+
+        log(layer);
+
+        log(layer.style().fills().firstObject());
+
+        var fill = layer.style().fills().firstObject();
+        fill.setFillType(4); 
+
+        var coll = layer.style().fills().firstObject().documentData().images();              
+
+        [fill setPatternImage: newImage collection:coll];
+      }
+    } else {
+      var message = "No images found tagged with: " + tag;
+      [doc showMessage: message];
+    }
+  }
+} else {
+  [doc showMessage:"No layer is selected."];
+}
